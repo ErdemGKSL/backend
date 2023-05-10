@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acord Auth Callback</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    html,
+    body {
+      background: #26282c;
+      color: whitesmoke;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    }
+
+    #app {
+      border-radius: 50px;
+      background: #26282c;
+      box-shadow: 20px 20px 60px #202225,
+        -20px -20px 60px #2c2e33;
+
+      width: 350px;
+      height: 350px;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 32px;
+      color: whitesmoke;
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 32px;
+    }
+
+    .code {
+      border-radius: 8px;
+      background: #26282c;
+      box-shadow: 10px 10px 20px #202225,
+        -10px -10px 20px #2c2e33;
+      border: none;
+      padding: 16px;
+      color: whitesmoke;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="title">Copy Acord Token</div>
+    <input class="code" type="text" readonly>
+  </div>
+
+  <script>
+    const codeEl = document.querySelector('.code');
+
+    (async () => {
+      const url = new URL(window.location.href);
+      // if (!url.searchParams.get('data')) return (english.innerText = 'Invalid data.', turkish.innerText = 'Geçersiz veri.');
+      const data = JSON.parse(atob(url.searchParams.get('data')));
+      // window.history.replaceState({}, document.title, "/static/callback/step3");
+
+      codeEl.value = data.acordToken;
+      codeEl.onclick = () => {
+        codeEl.select();
+        document.execCommand('copy');
+      }
+    })();
+  </script>
+</body>
+
+</html>

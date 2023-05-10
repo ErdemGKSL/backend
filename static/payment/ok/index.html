@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Done</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    html,
+    body {
+      background: #26282c;
+      color: whitesmoke;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    }
+
+    #app {
+      border-radius: 50px;
+      background: #26282c;
+      box-shadow: 20px 20px 60px #202225,
+        -20px -20px 60px #2c2e33;
+
+      width: 350px;
+      height: 350px;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 32px;
+      color: whitesmoke;
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      font-weight: 400;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="title">Payment Done</div>
+    <div class="subtitle">Loading...</div>
+  </div>
+
+  <script>
+    async function findPort(start, increment) {
+      let port = start - 1;
+      while (port < start + increment) {
+        port += 1;
+
+        let val = await new Promise((resolve) => {
+          fetch(`http://localhost:${port}/ping`).then((d) => {
+            if (d.status === 200) {
+              resolve(port);
+            } else {
+              resolve(false);
+            }
+          }).catch(() => {
+            resolve(false);
+          });
+
+          setTimeout(() => {
+            resolve(false);
+          }, 100);
+        });
+
+        if (val) {
+          return val;
+        } else if (port === start + increment) {
+          return null
+        }
+      }
+    }
+
+    const subtitle = document.querySelector('.subtitle');
+    (async () => {
+      subtitle.innerHTML = 'Searching for active acord instance...';
+      let port = await findPort(6160, 10);
+
+      if (!port) {
+        subtitle.innerHTML = 'Failed to find active acord instance.';
+        return;
+      }
+
+      subtitle.innerHTML = 'Sending payment done event...';
+
+      await fetch(`http://localhost:${port}/handler`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: "CosmeticsPaymentOk",
+          data: {}
+        })
+      });
+
+      subtitle.innerHTML = 'Done! You can close this tab now.';
+    })();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,232 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String   @unique @db.VarChar(64)
+  acord_token          String   @unique @db.VarChar(64)
+  discord_access_token String   @unique @db.VarChar(64)
+  updated_at           DateTime @updatedAt
+  created_at           DateTime @default(now())
+  last_exchange        DateTime @default(now())
+
+  deposit Decimal @default(0) @db.Decimal(12, 4)
+
+  invited_by_id String? @db.VarChar(64)
+  invited_by    User?   @relation("rel_invited_by", fields: [invited_by_id], references: [id], onDelete: SetNull)
+  invitees      User[]  @relation("rel_invited_by")
+
+  data                 UserData[]
+  features             UserFeature[]
+  orders               Order[]
+  BRConnectionDisabler BRConnectionDisabler[]
+
+  @@index([invited_by_id], name: "idx_user_invited_by_id", type: Hash)
+  @@index([last_exchange], name: "idx_user_last_exchange", type: BTree)
+  @@index([created_at], name: "idx_user_created_at", type: BTree)
+}
+
+model UserData {
+  user_id    String   @db.VarChar(64)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  key        String   @db.VarChar(64)
+  value      Json     @db.JsonB
+  updated_at DateTime @updatedAt
+  created_at DateTime @default(now())
+
+  @@unique([user_id, key], name: "unq_user_data_user_id_key")
+  @@index([user_id], name: "idx_user_data_user_id", type: Hash)
+}
+
+enum FeatureType {
+  badge
+  colored_name
+  hat
+  // fonted_name
+  profile_music
+  // profile_animation
+  // avatar_shine
+}
+
+model UserFeature {
+  id         Int               @unique @default(autoincrement())
+  user       User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    String            @db.VarChar(64)
+  type       FeatureType
+  feature_id Int?
+  data       Json?             @db.JsonB
+  enabled    Boolean           @default(true)
+  durations  FeatureDuration[] @relation("user_feature_durations")
+
+  permission_requirement Int @default(0) @db.SmallInt
+
+  @@unique([user_id, type, feature_id], name: "unq_user_feature_user_id_type_feature_id")
+  @@index([user_id], name: "idx_user_feature_user_id", type: Hash)
+}
+
+model FeatureDuration {
+  id              Int         @unique @default(autoincrement())
+  user_feature_id Int
+  user_feature    UserFeature @relation("user_feature_durations", fields: [user_feature_id], references: [id], onDelete: Cascade)
+  duration        BigInt?
+  consume_start   DateTime?
+  consume_end     DateTime?
+
+  @@index([user_feature_id], name: "idx_feature_duration_user_feature_id", type: Hash)
+  @@index([consume_start], name: "idx_feature_duration_consume_start")
+  @@index([consume_end], name: "idx_feature_duration_consume_end")
+}
+
+model BadgeRoleConnection {
+  id       Int                    @unique @default(autoincrement())
+  role_id  String                 @db.VarChar(64)
+  badge_id Int
+  badge    Badge                  @relation(fields: [badge_id], references: [id], onDelete: Cascade)
+  disabled BRConnectionDisabler[]
+
+  @@unique([role_id, badge_id], name: "unq_badge_role_connection_role_id_badge_id")
+  @@index([role_id], name: "idx_badge_role_connection_role_id", type: Hash)
+  @@index([badge_id], name: "idx_badge_role_connection_badge_id", type: Hash)
+}
+
+model BRConnectionDisabler {
+  id                       Int                 @unique @default(autoincrement())
+  badge_role_connection_id Int
+  badge_role_connection    BadgeRoleConnection @relation(fields: [badge_role_connection_id], references: [id], onDelete: Cascade)
+  user_id                  String              @db.VarChar(64)
+  user                     User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  disabled                 Boolean             @default(false)
+
+  @@unique([badge_role_connection_id, user_id], name: "unq_br_connection_disabler_badge_role_connection_id_user_id")
+  @@index([user_id], name: "idx_br_connection_disabler_user_id", type: Hash)
+}
+
+model Badge {
+  id              Int                   @unique @default(autoincrement())
+  name            String                @db.VarChar(64)
+  display_name    String                @db.VarChar(128)
+  image           String                @db.VarChar(256)
+  permisssion     Int                   @default(0) @db.SmallInt
+  role_connection BadgeRoleConnection[]
+}
+
+model Hat {
+  id           Int    @unique @default(autoincrement())
+  name         String @db.VarChar(64)
+  display_name String @db.VarChar(128)
+  image        String @db.VarChar(256)
+}
+
+enum ViewType {
+  featured
+  main_page
+  none
+}
+
+model StoreItem {
+  id           Int         @unique @default(autoincrement())
+  name         String      @db.VarChar(64)
+  image        String[]    @db.VarChar(256)
+  price        Decimal     @db.Decimal(12, 4)
+  view_type    ViewType    @default(none)
+  view_order   Int         @default(0) @db.SmallInt
+  feature_type FeatureType
+  feature_id   Int         @default(0) @db.SmallInt
+  enabled      Boolean     @default(true)
+
+  data Json @default("{}") @db.JsonB
+
+  packs  PackConnecter[]
+  orders OrderItemConnector[]
+
+  // @@unique([feature_type, feature_id], name: "unq_market_item_feature_type_feature_id")
+  @@index([name], name: "idx_market_item_name", type: BTree)
+  @@index([feature_type], name: "idx_market_item_feature_type", type: Hash)
+  @@index([feature_id], name: "idx_market_item_feature_id", type: Hash)
+}
+
+model PackConnecter {
+  id      Int           @unique @default(autoincrement())
+  pack_id Int
+  pack    StoreItemPack @relation(fields: [pack_id], references: [id], onDelete: Cascade)
+  item_id Int
+  item    StoreItem     @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([pack_id, item_id], name: "unq_pack_connecter_pack_id_item_id")
+}
+
+model StoreItemPack {
+  id         Int                      @unique @default(autoincrement())
+  name       String                   @db.VarChar(64)
+  image      String[]                 @db.VarChar(256)
+  price      Decimal                  @db.Decimal(12, 4)
+  view_type  ViewType                 @default(none)
+  view_order Int                      @default(0) @db.SmallInt
+  items      PackConnecter[]
+  enabled    Boolean                  @default(true)
+  orders     OrderItemPackConnector[]
+
+  data Json @default("{}") @db.JsonB
+}
+
+model OrderItemConnector {
+  id       Int       @unique @default(autoincrement())
+  order_id Int
+  order    Order     @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  item_id  Int
+  item     StoreItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  data     Json?     @db.JsonB
+}
+
+model OrderItemPackConnector {
+  id       Int           @unique @default(autoincrement())
+  order_id Int
+  order    Order         @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  item_id  Int
+  item     StoreItemPack @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  data     Json?         @db.JsonB
+}
+
+model Order {
+  id        Int     @unique @default(autoincrement())
+  vallet_id String? @db.VarChar(16)
+
+  user_id          String   @db.VarChar(64)
+  payment_page_url String?  @db.VarChar(256)
+  user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  fulfilled        Boolean  @default(false)
+  total_price      Decimal? @db.Decimal(12, 4)
+  currency         Currency @default(try)
+
+  created_at   DateTime  @default(now())
+  purchased_at DateTime?
+
+  items OrderItemConnector[]
+  packs OrderItemPackConnector[]
+
+  @@index([created_at], name: "idx_order_created_at", type: BTree)
+  @@index([fulfilled], name: "idx_order_fulfilled", type: Hash)
+  @@index([user_id], name: "idx_order_user_id", type: Hash)
+}
+
+enum Currency {
+  usd
+  try
+}
+
+model KeywordTrigger {
+  id         Int    @unique @default(autoincrement())
+  keyword    String @unique @db.VarChar(128)
+  definition String @db.VarChar(750)
+
+  @@index([keyword], name: "idx_keyword_trigger_keyword", type: BTree)
+}
