@@ -90,6 +90,7 @@ const schema = Joi.object({
 
 /** @type {import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, qs.ParsedQs, Record<string,any>>} */
 module.exports = async function (req, res, next) {
+  let orderId;
   try {
     const body = await schema.validateAsync(req.body);
     const { items, buyer_name, buyer_surname, buyer_gsm_no, buyer_mail, buyer_address, buyer_country, buyer_city, buyer_district, buyer_locale } = body;
@@ -107,15 +108,13 @@ module.exports = async function (req, res, next) {
           if (!itemExists || !itemExists.enabled) {
             return res.send({
               ok: false,
-              error: {
-                message: "Item not found."
-              }
+              error: "Item not found."
             });
           }
           break;
         }
         case "pack": {
-          const packExists = await prisma.storePack.findUnique({
+          const packExists = await prisma.storeItemPack.findUnique({
             where: {
               id: item.id
             }
@@ -124,9 +123,7 @@ module.exports = async function (req, res, next) {
           if (!packExists || !packExists.enabled) {
             return res.send({
               ok: false,
-              error: {
-                message: "Pack not found."
-              }
+              error: "Pack not found."
             });
           }
           break;
@@ -236,6 +233,8 @@ module.exports = async function (req, res, next) {
       });
     }));
 
+    orderId = order?.id;
+
     const options = await buildOptions(order, {
       name: buyer_name,
       surname: buyer_surname,
@@ -276,6 +275,13 @@ module.exports = async function (req, res, next) {
 
     res.send({ ok: true, data: { payment_page_url } });
   } catch (e) {
+    if (orderId) {
+      await prisma.order.delete({
+        where: {
+          id: orderId
+        }
+      });
+    }
     res.status(400).send({ ok: false, error: e.message });
     throw e;
   }
