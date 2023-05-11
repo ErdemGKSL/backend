@@ -9,6 +9,4 @@ router.post(`/callback/${process.env.VALLET_WEBHOOK_SECRET}`, require('./callbac
 
 router.get('/list', limiter(60, 5), require("../../../middlewares/user-auth"), require('./list.js'));
 
-router.delete('/:id', limiter(60, 15),require("../../../middlewares/user-auth"), require("./cancel.js"));
-
 module.exports = router;
