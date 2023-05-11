@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
       id: true,
       feature_id: true,
     },
-    skip: req.query.all === "true" ? undefined : (page - 1) * pageSize,
+    skip: req.query.all === "true" ? undefined : ((page - 1) * pageSize),
     take: req.query.all === "true" ? undefined : pageSize,
   }).then((e) => e.map((e) => {
     e.price = Number(e.price);
