@@ -34,8 +34,8 @@ module.exports = async (req, res) => {
         }
       }
     },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
+    skip: req.query.all === "true" ? undefined : (page - 1) * pageSize,
+    take: req.query.all === "true" ? undefined : pageSize,
   }).then((e) => e.map((e) => {
     e.items = e.items.map((e) => e.item);
     e.price = Number(e.price);
